@@ -56,8 +56,6 @@ if (empty($_SERVER['PHP_AUTH_USER']) ||
 - Использование подготовленных запросов (Prepared Statements)
 - Использование PDO с параметризованными запросами
 
-**Примеры исправлений**:
-
 ```php
 // В admin.php
 $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
