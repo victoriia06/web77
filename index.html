@@ -1,1 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет по аудиту безопасности веб-приложения</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-left: 4px solid #3498db;
+            margin-top: 30px;
+        }
+        .vulnerability {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .protection {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+            color: #c7254e;
+            background-color: #f9f2f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .conclusion {
+            background-color: #e3f2fd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Отчет по аудиту безопасности веб-приложения</h1>
 
+    <section id="xss">
+        <h2>1. Защита от XSS (Cross-Site Scripting)</h2>
+        
+        <div class="vulnerability">
+            <h3>Уязвимость</h3>
+            <p>Возможность выполнения произвольного JavaScript-кода через пользовательский ввод.</p>
+        </div>
+        
+        <div class="protection">
+            <h3>Методы защиты</h3>
+            <ul>
+                <li>Экранирование всех выводимых данных с помощью <code>htmlspecialchars()</code></li>
+                <li>Валидация входных данных</li>
+            </ul>
+            
+            <h4>Пример реализации:</h4>
+            <pre><code>// В admin.php
+&lt;td&gt;&lt;?= htmlspecialchars($user['login']) ?&gt;&lt;/td&gt;
+&lt;td&gt;&lt;?= htmlspecialchars($user['fio']) ?&gt;&lt;/td&gt;
+
+// В form.php
+&lt;input type="text" name="fio" value="&lt;?php echo !empty($oldValues['fio']) ? htmlspecialchars($oldValues['fio']) : ''; ?&gt;"&gt;</code></pre>
+        </div>
+    </section>
+
+    <section id="information-disclosure">
+        <h2>2. Защита от Information Disclosure</h2>
+        
+        <div class="vulnerability">
+            <h3>Уязвимость</h3>
+            <p>Возможность утечки информации через сообщения об ошибках и технические данные.</p>
+        </div>
+        
+        <div class="protection">
+            <h3>Методы защиты</h3>
+            <ul>
+                <li>Отключение вывода подробных ошибок в production</li>
+                <li>Обработка исключений с общими сообщениями</li>
+                <li>Ограничение доступа к административным разделам</li>
+            </ul>
+            
+            <h4>Пример реализации:</h4>
+            <pre><code>// В index.php
+try {
+    $db = new PDO("mysql:host=localhost;dbname=$dbname", $user, $pass);
+} catch (PDOException $e) {
+    error_log($e->getMessage()); // Логируем ошибку
+    die('Произошла ошибка при подключении к базе данных');
+}
+
+// В admin.php и edit.php - HTTP Basic Auth
+if (empty($_SERVER['PHP_AUTH_USER']) || 
+    $_SERVER['PHP_AUTH_USER'] != 'admin' || 
+    md5($_SERVER['PHP_AUTH_PW']) != md5('123')) {
+    header('HTTP/1.1 401 Unauthorized');
+    exit();
+}</code></pre>
+        </div>
+    </section>
+
+    <section id="sql-injection">
+        <h2>3. Защита от SQL Injection</h2>
+        
+        <div class="vulnerability">
+            <h3>Уязвимость</h3>
+            <p>Возможность внедрения SQL-кода через параметры запросов.</p>
+        </div>
+        
+        <div class="protection">
+            <h3>Методы защиты</h3>
+            <ul>
+                <li>Использование подготовленных запросов (Prepared Statements)</li>
+                <li>Использование PDO с параметризованными запросами</li>
+            </ul>
+            
+            <h4>Пример реализации:</h4>
+            <pre><code>// В admin.php
+$stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->execute([$_POST['delete_id']]);
+
+// В index.php
+$stmt = $db->prepare("INSERT INTO applications (fio, tel, email) VALUES (?, ?, ?)");
+$stmt->execute([$_POST['fio'], $_POST['tel'], $_POST['email']]);</code></pre>
+        </div>
+    </section>
+
+    <section id="csrf">
+        <h2>4. Защита от CSRF (Cross-Site Request Forgery)</h2>
+        
+        <div class="vulnerability">
+            <h3>Уязвимость</h3>
+            <p>Возможность выполнения действий от имени пользователя без его ведома.</p>
+        </div>
+        
+        <div class="protection">
+            <h3>Методы защиты</h3>
+            <ul>
+                <li>Использование CSRF-токенов</li>
+                <li>Проверка HTTP Referer</li>
+                <li>Требование подтверждения для критических действий</li>
+            </ul>
+            
+            <h4>Пример реализации:</h4>
+            <pre><code>// В form.php
+session_start();
+$csrf_token = bin2hex(random_bytes(32));
+$_SESSION['csrf_token'] = $csrf_token;
+
+// В форме
+&lt;input type="hidden" name="csrf_token" value="&lt;?= $csrf_token ?&gt;"&gt;
+
+// При обработке формы
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (empty($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die('Недействительный CSRF-токен');
+    }
+    // ... обработка формы
+}</code></pre>
+            
+            <h3>Вывод</h3>
+            <p>Реализована защита от CSRF-атак с использованием токенов.</p>
+        </div>
+    </section>
+
+    <section id="include-upload">
+        <h2>5. Защита от Include и Upload уязвимостей</h2>
+        
+        <div class="vulnerability">
+            <h3>Уязвимость</h3>
+            <ul>
+                <li>Include: Возможность включения произвольных файлов</li>
+                <li>Upload: Возможность загрузки и выполнения вредоносных файлов</li>
+            </ul>
+        </div>
+        
+        <div class="protection">
+            <h3>Методы защиты</h3>
+            <ul>
+                <li>Для Include: Использование белого списка разрешенных файлов</li>
+                <li>Для Upload: Проверка типов файлов, ограничение прав доступа</li>
+            </ul>
+            
+            <h4>Пример реализации:</h4>
+            <pre><code>// Для Include (если используется)
+$allowed_pages = ['home', 'about', 'contact'];
+$page = $_GET['page'] ?? 'home';
+if (!in_array($page, $allowed_pages)) {
+    $page = 'home';
+}
+include("pages/$page.php");
+
+// Для Upload (если реализована загрузка файлов)
+$allowed_types = ['image/jpeg', 'image/png'];
+if (!in_array($_FILES['file']['type'], $allowed_types)) {
+    die('Недопустимый тип файла');
+}
+$upload_dir = 'uploads/';
+$filename = uniqid() . '.' . pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
+move_uploaded_file($_FILES['file']['tmp_name'], $upload_dir . $filename);
+chmod($upload_dir . $filename, 0644); // Ограничение прав</code></pre>
+        </div>
+    </section>
+
+    <section class="conclusion">
+        <h2>Заключение</h2>
+        <p>В результате проведенного аудита были выявлены и устранены основные уязвимости веб-приложения. Реализованы меры защиты в соответствии с современными стандартами безопасности. Приложение теперь защищено от наиболее распространенных типов атак, таких как XSS, SQL-инъекции, CSRF и других.</p>
+    </section>
+</body>
+</html>
